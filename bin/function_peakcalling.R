@@ -109,5 +109,19 @@ make_beds<- function(ArrowFile, ArrowFileName,
             "_blacklistrm.bed"), format="bed")
     }
 }
+call_cluster <- function(cell_type, bed_files){
+
+    pseudo_files <- bed_files[grepl(cell_type, bed_files)]
+    pseudo_files <- pseudo_files[grepl(cell_type, pseudo_files)]
+    pseudo_files <- pseudo_files[grepl("_blacklistrm.bed", pseudo_files)]
+
+    all_pseudo_files <- concateBeds(paste0("snATACseq/bedfiles/", pseudo_files))
+    export(all_pseudo_files, con=paste0("snATACseq/bedfiles/",
+        cell_type, "_blacklistrm.bed"), format="bed")
+
+    macsPeaks(paste0("snATACseq/bedfiles/", cell_type, "_blacklistrm.bed"),
+        paste0("snATACseq/bedfiles/", cell_type))
+
+}
 
 
