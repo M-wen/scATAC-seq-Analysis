@@ -10,10 +10,7 @@ parser <- ArgumentParser()
 parser$add_argument("-p", "--preprocess", required=TRUE, help="preprocessed dir")
 parser$add_argument("-s", "--singlet", required=TRUE, help="singlet dir")
 parser$add_argument("-g", "--genome", default = "hg38", help="used genome [default %(default)s]")
-parser$add_argument("--blacklist", help="blacklist in bed gz")
-parser$add_argument("--chromSize", help="chrom size")
 parser$add_argument("-d", "--dir", required=TRUE, help="output dir")
-parser$add_argument("-o", "--output", required=TRUE, help="output file prefix")
 
 # load library
 library(ArchR)
