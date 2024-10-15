@@ -53,7 +53,7 @@ rm(pooled_gr)
 final_peak <- c(pooledInBothRepsPeak,pooledInBothPsRepsPeak)
 pooled_peak_df <- fread(pooled_peak,header = F)
 # final_df <- unique(rbind(pooledInBothReps_df,pooledInBothPsReps_df))
-finle_df <- pooled_peak_df[which(pooled_peak_df$V4 %in% final_peak),]
+final_df <- pooled_peak_df[which(pooled_peak_df$V4 %in% final_peak),]
 final_df$V5[final_df$V5 > 1000]  <- 1000
 chr_pattern <- '^chr[0-9XY]+$'
 final_df <- final_df[grepl(chr_pattern, final_df$V1),]
