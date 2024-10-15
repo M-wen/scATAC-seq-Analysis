@@ -1,59 +1,60 @@
 library(ArchR)
 library(parallel)
 
-overlap_peak_gr <- function(pooled_gr, rep_gr) {  
+overlap_peak <- function(pooled_gr, rep_gr) {  
     overlap_pooled_rep <- findOverlaps(pooled_gr, rep_gr)  
     overlap_pooled <- pooled_gr[queryHits(overlap_pooled_rep)]
     overlap_rep1gr <- rep_gr[subjectHits(overlap_pooled_rep)]
     overlapgr <- pintersect(overlap_pooled,overlap_rep1gr)
-
-    filtered_gr <- overlap_pooled[width(overlapgr)/width(overlap_pooled) > 0.5 | width(overlapgr)/width(overlap_rep1gr) > 0.5]  
-    return(filtered_gr)
+    filtered_gr <- overlap_pooled[width(overlapgr)/width(overlap_pooled) >= 0.5 | width(overlapgr)/width(overlap_rep1gr) >= 0.5]  
+    # filtered_gr <- unique(filtered_gr)
+    peak_name <- unique(filtered_gr$name)
+    return(peak_name)
 }
 
 filter_peaks <- function(celltype){
 Peaks <- list.files("03_peakcalling/bedfiles",".narrowPeak")
 reps <- paste0("03_peakcalling/bedfiles/",Peaks[grep(celltype,Peaks)])
 pooled_peak <- paste0("03_peakcalling/bedfiles/",celltype,"_peaks.narrowPeak")
+reps <- reps[which(!reps %in% pooled_peak)]
 
-## Find pooled peaks that overlap Reps where overlap is defined as the fractional overlap wrt any one of the overlapping peak pairs > 0.5
-pooledInReps <- mclapply(reps,function(x){
-    pooled_gr <- rtracklayer::import(pooled_peak)
+pooled_gr <- rtracklayer::import(pooled_peak)
+## Find pooled peaks that overlap Reps where overlap is defined as the fractional overlap wrt any one of the overlapping peak pairs >= 0.5
+pooledInReps <- lapply(reps,function(x){
+    # pooled_gr <- rtracklayer::import(pooled_peak)
     rep_gr <- rtracklayer::import(x)
-    pooledInRep <- overlap_peak_gr(pooled_gr,rep_gr)
-},mc.cores = 3)
+    pooledInRep <- overlap_peak(pooled_gr,rep_gr)
+    return(pooledInRep)
+})
 
 ##  peaks in both individual replicates were kept
-pairs <- combinat::combn(seq_along(pooledInReps),2,simplify = FALSE)
-pooledInBothReps <- mclapply(pairs,function(x) overlap_peak_gr(pooledInReps[[x[1]]],pooledInReps[[x[2]]]),mc.cores = 3)
-rm(pooledInReps)
+pooledInRepsStat <- table(unlist(pooledInReps))
+pooledInBothRepsPeak <- names(pooledInRepsStat[pooledInRepsStat > 1])
 
-pooledInBothReps_df <- mclapply(seq_along(pooledInBothReps), function(x){
-    df <- as.data.frame(pooledInBothReps[[x]]) 
-    # df <- df[order(df$seqnames,df$start),]
-    df <- unique(df)
-},mc.cores = 3) %>% do.call(rbind,.) 
-rm(pooledInBothReps)
-pooledInBothReps_df <- unique(pooledInBothReps_df)
-
-## Find pooled peaks that overlap PooledPseudoRep1 and PooledPseudoRep2 where overlap is defined as the fractional overlap wrt any one of the overlapping peak pairs > 0.5
+## Find pooled peaks that overlap PooledPseudoRep1 and PooledPseudoRep2 where overlap is defined as the fractional overlap wrt any one of the overlapping peak pairs >= 0.5
 # psreps <- c(pseudo1_peak,pseudo2_peak)
 pseudoPeaks <- list.files("03_peakcalling/bedfiles_pseudo",".narrowPeak")
 psreps <- paste0("03_peakcalling/bedfiles_pseudo/",pseudoPeaks[grep(celltype,pseudoPeaks)])
-pooledInPsReps <- mclapply(psreps,function(x){
-    pooled_gr <- rtracklayer::import(pooled_peak)
+pooledInPsReps <- lapply(psreps,function(x){
+    # pooled_gr <- rtracklayer::import(pooled_peak)
     psrep_gr <- rtracklayer::import(x)
-    pooledInpsRep <- overlap_peak_gr(pooled_gr,psrep_gr)
-},mc.cores = 2)
+    pooledInpsRep <- overlap_peak(pooled_gr,psrep_gr)
+    return(pooledInpsRep)
+})
 ##  peaks in both pseudo-replicates were kept
-pooledInBothPsReps <- overlap_peak_gr(pooledInPsReps[[1]],pooledInPsReps[[2]])
+# pooledInBothPsReps <- overlap_peak_gr(pooledInPsReps[[1]],pooledInPsReps[[2]])
+pooledInPsRepsStat <- table(unlist(pooledInPsReps))
+pooledInBothPsRepsPeak <- names(pooledInPsRepsStat[pooledInPsRepsStat > 1])
 rm(pooledInPsReps)
-
-pooledInBothPsReps_df <- unique(as.data.frame(pooledInBothPsReps))
+rm(pooled_gr)
+# pooledInBothPsReps_df <- unique(as.data.frame(pooledInBothPsReps))
 
 ## Combine peak lists
-final_df <- unique(rbind(pooledInBothReps_df,pooledInBothPsReps_df))
-final_df$score[final_df$score > 1000]  <- 1000
+final_peak <- c(pooledInBothRepsPeak,pooledInBothPsRepsPeak)
+pooled_peak_df <- fread(pooled_peak,header = F)
+# final_df <- unique(rbind(pooledInBothReps_df,pooledInBothPsReps_df))
+finle_df <- pooled_peak_df[which(pooled_peak_df$V4 %in% final_peak),]
+final_df$V5[final_df$V5 > 1000]  <- 1000
 chr_pattern <- '^chr[0-9XY]+$'
 final_df <- final_df[grepl(chr_pattern, final_df$seqnames),]
 final_df <- final_df[,-4]
@@ -63,7 +64,7 @@ fwrite(final_df,paste0("04_parsePeak/",celltype,".naivePeakList.narrowPeak"),col
 ## Get summit
 pooled_summit <- paste0("03_peakcalling/bedfiles/",celltype,"_summits.bed")
 pooled_summit_df <- as.data.frame(fread(pooled_summit,header = F))
-pooled_summit_df <- pooled_summit_df[which(pooled_summit_df$V4 %in% final_df$name),]
+pooled_summit_df <- pooled_summit_df[which(pooled_summit_df$V4 %in% final_peak),]
 fwrite(pooled_summit_df,paste0("04_parsePeak/",celltype,".naiveSummitList.bed"),col.names = F,sep="\t")
 # rtracklayer::export(pooled_summit_df, con=paste0("04_parsePeak/",celltype,".naiveSummitList.bed"), format="bed")
 
@@ -95,6 +96,4 @@ celltypes <- unique(sapply(seq_along(input),function(x){y=input[[x]][1]
 celltypes  
 
 #cores <- length(celltypes)
-lapply(celltypes,function(x) filter_peaks(x))
-
-
+mclapply(celltypes,function(x) filter_peaks(x),mc.cores = cores)
