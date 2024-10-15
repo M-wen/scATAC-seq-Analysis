@@ -56,8 +56,8 @@ pooled_peak_df <- fread(pooled_peak,header = F)
 finle_df <- pooled_peak_df[which(pooled_peak_df$V4 %in% final_peak),]
 final_df$V5[final_df$V5 > 1000]  <- 1000
 chr_pattern <- '^chr[0-9XY]+$'
-final_df <- final_df[grepl(chr_pattern, final_df$seqnames),]
-final_df <- final_df[,-4]
+final_df <- final_df[grepl(chr_pattern, final_df$V1),]
+# final_df <- final_df[,-4]
 fwrite(final_df,paste0("04_parsePeak/",celltype,".naivePeakList.narrowPeak"),col.names = F,sep="\t")                             
 # rtracklayer::export(final_df, con=paste0("04_parsePeak/",celltype,".naivePeakList.narrowPeak"), format="bed")
 
