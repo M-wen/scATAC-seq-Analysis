@@ -1,36 +1,3 @@
-#!/usr/bin/env Rscript
-
-suppressPackageStartupMessages(library("argparse"))
-
-# create parser object
-parser <- ArgumentParser()
-
-# specify our desired options
-# by default ArgumentParser will add an help option
-parser$add_argument("-i", "--input", required=TRUE, help="list of summit bed")
-parser$add_argument("-g", "--genome", default = "mm10", help="used genome [default %(default)s]")
-parser$add_argument("--blacklist", default = "/projects/ps-renlab/yangli/genome/mm10/mm10.blacklist.bed.gz", help="blacklist in bed gz")
-parser$add_argument("--chromSize", default = "/projects/ps-renlab/yangli/genome/mm10/mm10.chrom.sizes", help="chrom size")
-parser$add_argument("-d", "--dir", required=TRUE, help="output dir")
-parser$add_argument("-o", "--output", required=TRUE, help="output file prefix")
-# get command line options, if help option encountered print help and exit,
-# otherwise if options not found on command line then set defaults,
-args <- parser$parse_args()
-
-suppressPackageStartupMessages(library("data.table"))
-suppressPackageStartupMessages(library("GenomicRanges"))
-suppressPackageStartupMessages(library("BSgenome"))
-library(tictoc)
-
-inF = args$input
-blacklistF = args$blacklist
-genome = args$genome
-chromF = args$chromSize
-outDir = args$dir
-outF = args$output
-
-##########################
-# Functions 
 
 # read bed to gr
 read2gr <- function(bedF, label){
@@ -53,25 +20,6 @@ extendSummit <- function(gr, size=500){
   gr <- resize(gr, width=size, fix="center")
   return(gr)
 }
-
-
-# filter blacklist
-filter4blacklist <- function(gr, blacklistF){
-  black_list = read.table(blacklistF);
-  black_list.gr = GRanges(
-    black_list[,1],
-    IRanges(black_list[,2], black_list[,3])
-  );
-  
-  idx = queryHits(
-    findOverlaps(gr, black_list.gr)
-  );
-  if(length(idx) > 0){
-    gr = gr[-idx]
-  }
-  return(gr)
-}
-
 
 # filter non-chromosome
 filter4chrom <- function(gr, chromF){
@@ -189,50 +137,3 @@ norm2spm <- function(gr, by = "score"){
   return(gr)
 }
 
-
-################################
-# working on peaks
-
-# load summit
-summitF <- read.table(inF, sep="\t", header=F)
-label.lst <- as.character(summitF$V1)
-file.lst <- as.character(summitF$V2)
-
-
-tic("parse summit peak set")
-peak.list = lapply(seq(file.lst), function(i){
-  message("working on summit set for... ", label.lst[i])
-  p.gr <- read2gr(file.lst[i], label=label.lst[i])
-  p.gr <- extendSummit(p.gr, size=500)
-  p.gr <- filter4blacklist(p.gr, blacklistF)
-  p.gr <- filter4chrom(p.gr, chromF)
-  p.gr <- filter4N(p.gr, genome=genome)
-  p.gr <- nonOverlappingGR(p.gr, by = "score", decreasing = TRUE)
-  p.gr <- norm2spm(p.gr, by="score")
-  p.gr
-})
-toc()
-
-
-tic("write filtered & fixed peak set")
-for(i in 1:length(label.lst)){
-  message("write fixed & filtered peak set to: ", outDir, label.lst[i], ".filteredNfixed.peakSet")
-  outPeak <- as.data.frame(peak.list[[i]])
-  outFname <- paste(outDir, label.lst[i], ".filterNfixed.peakset", sep="")
-  fwrite(outPeak, file=outFname, sep="\t", quote = F, col.names = T, row.names = F)
-}
-toc()
-
-
-tic("merge to union peak list")
-# merge
-merged.gr <- do.call(c, peak.list)
-merged.gr <- nonOverlappingGR(merged.gr, by = "spm", decreasing = TRUE)
-toc()
-
-
-tic("save union peak set")
-outUnion <- as.data.frame(merged.gr)
-outfname = paste(outDir, outF, ".filteredNfixed.union.peakSet",sep="")
-fwrite(outUnion, file=outfname, sep="\t", quote = F, col.names = T, row.names = F)
-toc()
