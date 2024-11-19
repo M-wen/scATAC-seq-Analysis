@@ -39,7 +39,7 @@ library(viridis)
 bk = seq(0.1, 1,by = 0.01)
 col_length = length(bk)
 if_1 = inferno(col_length/2)
-if _2 = rev(mako(col_length/2))
+if_2 = rev(mako(col_length/2))
 col= append(if_2,if_1)
 library(pheatmap)
 pheatmap(raw_rss, cluster_cols = T, cluster_rows = T,
