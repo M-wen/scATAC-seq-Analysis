@@ -1,1 +1,5 @@
 # scATAC-seq-Analysis
+Single-cell sequencing assay for transposase-accessible chromatin (scATAC-seq) is a powerful tool for chromatin accessibility research. The potential of this technology is attracting an increasing number of researchers to generate scATAC-seq data. Here, we develop a practical tutorial covering the key steps of a typical scATAC-seq analysis, from processing FASTQ files to downstream analysis, aimed at newcomers to the field. To illustrate the practical application of these steps, we have incorporated practice suggestions into a workflow and applied it to a publicly available dataset. First, we outline the steps for data pre-processing of scATAC-seq. Next, we detail the steps for downstream analysis. Finally, we describe the steps for multi-omics integration analysis.![image](https://github.com/user-attachments/assets/22e08041-7ee7-49f1-986e-d3142e5b215b)
+## 01_cellranger
+Fastq files were aligned to genome, and valid cell barcodes were called using the cellranger-atac count command with the default parameters. 
+## 02_det
