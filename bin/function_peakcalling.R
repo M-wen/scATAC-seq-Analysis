@@ -57,6 +57,13 @@ make_beds_pseudo <- function(ArrowFile, ArrowFileName,
         }
     }
 }
+call_peaks <- function(cellGroup, ArrowFile){
+
+    macsPeaks(paste0("03_peakcalling/bedfiles/", cellGroup, "_", ArrowFile,
+      "_blacklistrm.bed"), paste0("03_peakcalling/bedfiles/", cellGroup,
+      "_", ArrowFile))
+
+}
 call_pseudo <- function(cellGroup, ArrowFile, rep=2){
 
    for(k in 1:rep){
